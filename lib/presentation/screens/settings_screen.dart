@@ -83,13 +83,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 leading: const Icon(Icons.privacy_tip_outlined),
                 title: const Text('Privacy Policy'),
                 trailing: const Icon(Icons.open_in_new, size: 16),
-                onTap: () => _launchURL('https://yourwebsite.com/privacy'),
+                onTap: () => _launchURL('https://nutrilenspro.web.app/privacy'),
               ),
               ListTile(
                 leading: const Icon(Icons.description_outlined),
                 title: const Text('Terms of Service'),
                 trailing: const Icon(Icons.open_in_new, size: 16),
-                onTap: () => _launchURL('https://yourwebsite.com/terms'),
+                onTap: () => _launchURL('https://nutrilenspro.web.app/terms'),
               ),
               ListTile(
                 leading: const Icon(Icons.code),
