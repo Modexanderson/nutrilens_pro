@@ -45,6 +45,7 @@ dependencies:
   share_plus: ^7.2.1
   cached_network_image: ^3.3.0
   flutter_cache_manager: ^3.3.1
+  flutter_native_splash: ^2.4.4
   uuid: ^4.2.2
 
 dev_dependencies:
@@ -54,17 +55,30 @@ dev_dependencies:
   hive_generator: ^2.0.1
   build_runner: ^2.4.7
   riverpod_generator: ^2.3.9
-  flutter_launcher_icons: ^0.13.1
+  flutter_launcher_icons: ^0.14.3
 
-flutter_launcher_icons:
-  android: true
+flutter_icons:
+  android: "launcher_icon"
   ios: true
   remove_alpha_ios: true
   image_path: "assets/icons/app_icon.png"
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/icons/app_icon_foreground.png"
+  background_color: "#ffffff"
+# flutter pub run flutter_launcher_icons:main
 
-  # flutter pub run flutter_launcher_icons
+flutter_native_splash:
+  color: "#ffffff"
+  color_dark: "#080812"
+  image: assets/images/splash.png
+  # Android 12 handles the splash screen differently than previous versions.  Please visit
+  # https://developer.android.com/guide/topics/ui/splash-screen
+  # Following are Android 12 specific parameter.
+  android_12:
+    color: "#ffffff"
+    color_dark: "#080812"
+    image: assets/images/splash12.png
+    fullscreen: true
+  web: true
+# dart run flutter_native_splash:create
 
 flutter:
   uses-material-design: true
