@@ -16,93 +16,80 @@ class ScannerScreen extends StatefulWidget {
 
 class _ScannerScreenState extends State<ScannerScreen>
     with WidgetsBindingObserver {
-  MobileScannerController? _controller;
+  final MobileScannerController _controller = MobileScannerController(
+    detectionSpeed: DetectionSpeed.normal,
+    facing: CameraFacing.back,
+  );
+
   final ApiService _apiService = ApiService();
   bool _isProcessing = false;
+  bool _hasPermission = false;
   bool _isCheckingPermission = true;
-  PermissionStatus? _permissionStatus;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _checkAndInitializeCamera();
+    _checkCameraPermission();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _controller?.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Recheck permission when app comes to foreground
     if (state == AppLifecycleState.resumed) {
-      _checkAndInitializeCamera();
+      _checkCameraPermission();
     }
   }
 
-  Future<void> _checkAndInitializeCamera() async {
+  Future<void> _checkCameraPermission() async {
     setState(() => _isCheckingPermission = true);
 
     final status = await Permission.camera.status;
 
     if (mounted) {
       setState(() {
-        _permissionStatus = status;
+        _hasPermission = status.isGranted;
         _isCheckingPermission = false;
       });
+    }
+  }
 
-      // Initialize controller only if permission is granted
-      if (status.isGranted && _controller == null) {
-        _controller = MobileScannerController(
-          detectionSpeed: DetectionSpeed.normal,
-          facing: CameraFacing.back,
-        );
-        setState(() {}); // Rebuild to show camera
+  Future<void> _requestCameraPermission() async {
+    final status = await Permission.camera.request();
+
+    if (mounted) {
+      setState(() {
+        _hasPermission = status.isGranted;
+      });
+
+      // If still denied, show dialog to open settings
+      if (status.isDenied || status.isPermanentlyDenied) {
+        _showPermissionDialog();
       }
     }
   }
 
-  Future<void> _handlePermissionRequest() async {
-    final status = await Permission.camera.status;
-
-    if (status.isDenied) {
-      // First time asking or previously denied but can ask again
-      final result = await Permission.camera.request();
-      if (mounted) {
-        setState(() => _permissionStatus = result);
-        if (result.isGranted) {
-          _checkAndInitializeCamera();
-        }
-      }
-    } else if (status.isPermanentlyDenied || status.isRestricted) {
-      // Permission permanently denied, must open settings
-      _showSettingsDialog();
-    } else if (status.isGranted) {
-      _checkAndInitializeCamera();
-    }
-  }
-
-  void _showSettingsDialog() {
+  void _showPermissionDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Camera Access Required'),
+        title: const Text('Camera Permission Required'),
         content: const Text(
-          'Camera permission is required to scan barcodes.\n\n'
-          'Please enable camera access in Settings:\n'
-          '1. Tap "Open Settings"\n'
-          '2. Scroll down and tap "Camera"\n'
-          '3. Toggle it ON',
+          'This app needs camera access to scan barcodes. Please grant camera permission in Settings.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () async {
               Navigator.pop(context);
               await openAppSettings();
@@ -126,8 +113,10 @@ class _ScannerScreenState extends State<ScannerScreen>
     setState(() => _isProcessing = true);
 
     try {
+      // Check cache first
       Product? product = StorageService.getCachedProduct(barcode);
 
+      // If not in cache, fetch from API
       if (product == null) {
         product = await _apiService.getProductByBarcode(barcode);
       }
@@ -135,8 +124,10 @@ class _ScannerScreenState extends State<ScannerScreen>
       if (!mounted) return;
 
       if (product != null) {
+        // Save to history
         await StorageService.saveToHistory(product);
 
+        // Navigate to product detail
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -169,55 +160,44 @@ class _ScannerScreenState extends State<ScannerScreen>
 
   @override
   Widget build(BuildContext context) {
-    final hasPermission = _permissionStatus?.isGranted ?? false;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Scan Product'),
-        actions: hasPermission && _controller != null
+        actions: _hasPermission
             ? [
                 IconButton(
-                  icon: Icon(_controller!.torchEnabled
+                  icon: Icon(_controller.torchEnabled
                       ? Icons.flash_on
                       : Icons.flash_off),
-                  onPressed: () => _controller!.toggleTorch(),
+                  onPressed: () => _controller.toggleTorch(),
                 ),
                 IconButton(
                   icon: const Icon(Icons.flip_camera_ios),
-                  onPressed: () => _controller!.switchCamera(),
+                  onPressed: () => _controller.switchCamera(),
                 ),
               ]
             : null,
       ),
       body: _isCheckingPermission
           ? _buildLoadingState()
-          : !hasPermission
+          : !_hasPermission
               ? _buildPermissionDenied()
-              : _controller == null
-                  ? _buildLoadingState()
-                  : Stack(
-                      children: [
-                        MobileScanner(
-                          controller: _controller!,
-                          onDetect: _onBarcodeDetected,
-                        ),
-                        _buildOverlay(),
-                        if (_isProcessing) _buildLoadingOverlay(),
-                      ],
+              : Stack(
+                  children: [
+                    MobileScanner(
+                      controller: _controller,
+                      onDetect: _onBarcodeDetected,
                     ),
+                    _buildOverlay(),
+                    if (_isProcessing) _buildLoadingOverlay(),
+                  ],
+                ),
     );
   }
 
   Widget _buildLoadingState() {
     return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 16),
-          Text('Initializing camera...'),
-        ],
-      ),
+      child: CircularProgressIndicator(),
     );
   }
 
@@ -240,25 +220,24 @@ class _ScannerScreenState extends State<ScannerScreen>
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
-              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
-            Text(
-              _permissionStatus?.isPermanentlyDenied ?? false
-                  ? 'Camera permission was denied. Please enable it in Settings to scan barcodes.'
-                  : 'This app needs camera access to scan product barcodes.',
+            const Text(
+              'Please grant camera permission to scan barcodes',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey),
+              style: TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _handlePermissionRequest,
-              icon: const Icon(Icons.camera_alt),
-              label: Text(
-                _permissionStatus?.isPermanentlyDenied ?? false
-                    ? 'Open Settings'
-                    : 'Grant Permission',
-              ),
+            ElevatedButton(
+              onPressed: _requestCameraPermission,
+              child: const Text('Grant Permission'),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () async {
+                await openAppSettings();
+              },
+              child: const Text('Open Settings'),
             ),
           ],
         ),
@@ -269,9 +248,11 @@ class _ScannerScreenState extends State<ScannerScreen>
   Widget _buildOverlay() {
     return Stack(
       children: [
+        // Semi-transparent black overlay covering entire screen
         Container(
           color: Colors.black.withOpacity(0.5),
         ),
+        // Transparent center square (cut-out effect)
         Center(
           child: Container(
             width: 250,
@@ -284,8 +265,15 @@ class _ScannerScreenState extends State<ScannerScreen>
                 width: 3,
               ),
             ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(17),
+              child: Container(
+                color: Colors.transparent,
+              ),
+            ),
           ),
         ),
+        // Corner decorations
         Center(
           child: SizedBox(
             width: 250,
