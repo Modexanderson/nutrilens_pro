@@ -1,5 +1,3 @@
-// lib/presentation/screens/scanner_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -15,7 +13,8 @@ class ScannerScreen extends StatefulWidget {
   State<ScannerScreen> createState() => _ScannerScreenState();
 }
 
-class _ScannerScreenState extends State<ScannerScreen> {
+class _ScannerScreenState extends State<ScannerScreen>
+    with WidgetsBindingObserver {
   final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.normal,
     facing: CameraFacing.back,
@@ -24,24 +23,81 @@ class _ScannerScreenState extends State<ScannerScreen> {
   final ApiService _apiService = ApiService();
   bool _isProcessing = false;
   bool _hasPermission = false;
+  bool _isCheckingPermission = true;
 
   @override
   void initState() {
     super.initState();
-    _requestCameraPermission();
-  }
-
-  Future<void> _requestCameraPermission() async {
-    final status = await Permission.camera.request();
-    setState(() {
-      _hasPermission = status.isGranted;
-    });
+    WidgetsBinding.instance.addObserver(this);
+    _checkCameraPermission();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Recheck permission when app comes to foreground
+    if (state == AppLifecycleState.resumed) {
+      _checkCameraPermission();
+    }
+  }
+
+  Future<void> _checkCameraPermission() async {
+    setState(() => _isCheckingPermission = true);
+
+    final status = await Permission.camera.status;
+
+    if (mounted) {
+      setState(() {
+        _hasPermission = status.isGranted;
+        _isCheckingPermission = false;
+      });
+    }
+  }
+
+  Future<void> _requestCameraPermission() async {
+    final status = await Permission.camera.request();
+
+    if (mounted) {
+      setState(() {
+        _hasPermission = status.isGranted;
+      });
+
+      // If still denied, show dialog to open settings
+      if (status.isDenied || status.isPermanentlyDenied) {
+        _showPermissionDialog();
+      }
+    }
+  }
+
+  void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Camera Permission Required'),
+        content: const Text(
+          'This app needs camera access to scan barcodes. Please grant camera permission in Settings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await openAppSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _onBarcodeDetected(BarcodeCapture capture) async {
@@ -106,30 +162,41 @@ class _ScannerScreenState extends State<ScannerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Scan Product'),
-        actions: [
-          IconButton(
-            icon: Icon(
-                _controller.torchEnabled ? Icons.flash_on : Icons.flash_off),
-            onPressed: () => _controller.toggleTorch(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.flip_camera_ios),
-            onPressed: () => _controller.switchCamera(),
-          ),
-        ],
-      ),
-      body: !_hasPermission
-          ? _buildPermissionDenied()
-          : Stack(
-              children: [
-                MobileScanner(
-                  controller: _controller,
-                  onDetect: _onBarcodeDetected,
+        actions: _hasPermission
+            ? [
+                IconButton(
+                  icon: Icon(_controller.torchEnabled
+                      ? Icons.flash_on
+                      : Icons.flash_off),
+                  onPressed: () => _controller.toggleTorch(),
                 ),
-                _buildOverlay(),
-                if (_isProcessing) _buildLoadingOverlay(),
-              ],
-            ),
+                IconButton(
+                  icon: const Icon(Icons.flip_camera_ios),
+                  onPressed: () => _controller.switchCamera(),
+                ),
+              ]
+            : null,
+      ),
+      body: _isCheckingPermission
+          ? _buildLoadingState()
+          : !_hasPermission
+              ? _buildPermissionDenied()
+              : Stack(
+                  children: [
+                    MobileScanner(
+                      controller: _controller,
+                      onDetect: _onBarcodeDetected,
+                    ),
+                    _buildOverlay(),
+                    if (_isProcessing) _buildLoadingOverlay(),
+                  ],
+                ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: CircularProgressIndicator(),
     );
   }
 
@@ -161,6 +228,11 @@ class _ScannerScreenState extends State<ScannerScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
+              onPressed: _requestCameraPermission,
+              child: const Text('Grant Permission'),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
               onPressed: () async {
                 await openAppSettings();
               },
