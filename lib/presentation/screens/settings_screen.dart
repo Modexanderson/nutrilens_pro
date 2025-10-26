@@ -1,5 +1,4 @@
 // lib/presentation/screens/settings_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -17,6 +16,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final IAPService _iapService = IAPService.instance;
   bool _isIAPInitialized = false;
+  bool _isLoadingIAP = true;
 
   @override
   void initState() {
@@ -25,11 +25,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _initializeIAP() async {
-    await _iapService.initialize();
-    if (mounted) {
-      setState(() {
-        _isIAPInitialized = true;
-      });
+    setState(() {
+      _isLoadingIAP = true;
+    });
+
+    try {
+      await _iapService.initialize();
+
+      // Wait a bit for products to load
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (mounted) {
+        setState(() {
+          _isIAPInitialized = _iapService.isInitialized;
+          _isLoadingIAP = false;
+        });
+
+        // Debug output
+        print('IAP Initialized: $_isIAPInitialized');
+        print('IAP Available: ${_iapService.isAvailable}');
+        print('Products loaded: ${_iapService.products.length}');
+      }
+    } catch (e) {
+      print('IAP initialization failed: $e');
+      if (mounted) {
+        setState(() {
+          _isIAPInitialized = false;
+          _isLoadingIAP = false;
+        });
+      }
     }
   }
 
@@ -64,9 +88,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ListTile(
                 leading: const Icon(Icons.favorite, color: Colors.red),
                 title: const Text('Support with a Donation'),
-                subtitle: const Text('Help us keep this app free'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: _showDonationDialog,
+                subtitle: _isLoadingIAP
+                    ? const Text('Loading donation options...')
+                    : !_isIAPInitialized || !_iapService.isAvailable
+                        ? const Text('In-app purchases not available')
+                        : _iapService.products.isEmpty
+                            ? const Text('No donation options available')
+                            : const Text('Help us keep this app free'),
+                trailing: _isLoadingIAP
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: _isLoadingIAP ? null : _showDonationDialog,
               ),
             ],
           ),
@@ -118,6 +154,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ],
           ),
+
+          // Debug info (remove in production)
+          if (_isIAPInitialized || !_iapService.isAvailable)
+            _buildSection(
+              'Debug Info',
+              [
+                ListTile(
+                  title: const Text('IAP Status'),
+                  subtitle: Text(
+                    'Available: ${_iapService.isAvailable}\n'
+                    'Products: ${_iapService.products.length}\n'
+                    'Initialized: $_isIAPInitialized',
+                  ),
+                  isThreeLine: true,
+                ),
+              ],
+            ),
+
           const SizedBox(height: 24),
           Center(
             child: Text(
@@ -156,27 +210,94 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showDonationDialog() {
-    if (!_isIAPInitialized || !_iapService.isAvailable) {
+    // Check if still loading
+    if (_isLoadingIAP) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('In-app purchases are not available at the moment'),
+          content: Text('Please wait, loading donation options...'),
           behavior: SnackBarBehavior.floating,
         ),
       );
       return;
     }
 
+    // Check availability
+    if (!_isIAPInitialized || !_iapService.isAvailable) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Not Available'),
+            ],
+          ),
+          content: const Text(
+            'In-app purchases are not available at the moment.\n\n'
+            'This could be because:\n'
+            '• Your device doesn\'t support in-app purchases\n'
+            '• You\'re using a simulator/emulator\n'
+            '• The products haven\'t been approved yet\n'
+            '• Network connectivity issues',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _initializeIAP(); // Retry
+              },
+              child: const Text('Retry'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Check products
     final products = _iapService.products;
     if (products.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Loading donation options...'),
-          behavior: SnackBarBehavior.floating,
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('No Products Available'),
+            ],
+          ),
+          content: const Text(
+            'No donation options are currently available.\n\n'
+            'Please make sure the in-app purchases are:\n'
+            '• Approved in App Store Connect (not in Draft status)\n'
+            '• Available in your region\n'
+            '• Configured with correct Product IDs',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _initializeIAP(); // Retry
+              },
+              child: const Text('Retry'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
         ),
       );
       return;
     }
 
+    // Show donation dialog
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -187,33 +308,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Text('Support Us'),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Thank you for considering a donation! Your support helps us keep this app free and ad-supported.',
-            ),
-            const SizedBox(height: 16),
-            ...products.map((product) {
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(product.title),
-                subtitle: Text(product.description),
-                trailing: Text(
-                  product.price,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Thank you for considering a donation! Your support helps us keep this app free and ad-supported.',
+              ),
+              const SizedBox(height: 16),
+              ...products.map((product) {
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    title: Text(product.title.split('(').first.trim()),
+                    subtitle: Text(product.description),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          product.price,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ],
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _processDonation(product);
+                    },
                   ),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _processDonation(product);
-                },
-              );
-            }),
-          ],
+                );
+              }),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -236,25 +371,68 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return;
     }
 
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Processing donation...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
     try {
       await _iapService.buyProduct(product);
 
       if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Thank you for your support! ❤️'),
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text('Thank you for your support! ❤️'),
+                ),
+              ],
+            ),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Donation failed: $e'),
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('Donation failed: ${e.toString()}'),
+                ),
+              ],
+            ),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
