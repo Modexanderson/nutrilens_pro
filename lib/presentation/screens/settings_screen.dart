@@ -226,20 +226,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.orange),
-              SizedBox(width: 8),
-              Text('Not Available'),
+              Icon(Icons.info_outline,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.orange.shade300
+                      : Colors.orange),
+              const SizedBox(width: 8),
+              Text('Not Available',
+                  style: Theme.of(context).textTheme.titleLarge),
             ],
           ),
-          content: const Text(
+          content: Text(
             'In-app purchases are not available at the moment.\n\n'
             'This could be because:\n'
             '• Your device doesn\'t support in-app purchases\n'
             '• You\'re using a simulator/emulator\n'
             '• The products haven\'t been approved yet\n'
             '• Network connectivity issues',
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
           actions: [
             TextButton(
@@ -265,19 +270,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.warning_amber, color: Colors.orange),
-              SizedBox(width: 8),
-              Text('No Products Available'),
+              Icon(Icons.warning_amber,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.orange.shade300
+                      : Colors.orange),
+              const SizedBox(width: 8),
+              Text('No Products Available',
+                  style: Theme.of(context).textTheme.titleLarge),
             ],
           ),
-          content: const Text(
+          content: Text(
             'No donation options are currently available.\n\n'
             'Please make sure the in-app purchases are:\n'
             '• Approved in App Store Connect (not in Draft status)\n'
             '• Available in your region\n'
             '• Configured with correct Product IDs',
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
           actions: [
             TextButton(
@@ -301,11 +311,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.favorite, color: Colors.red),
-            SizedBox(width: 8),
-            Text('Support Us'),
+            Icon(Icons.favorite,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.red.shade300
+                    : Colors.red),
+            const SizedBox(width: 8),
+            Text('Support Us', style: Theme.of(context).textTheme.titleLarge),
           ],
         ),
         content: SingleChildScrollView(
@@ -313,8 +326,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Thank you for considering a donation! Your support helps us keep this app free and ad-supported.',
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
               ...products.map((product) {
@@ -325,18 +339,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       horizontal: 12,
                       vertical: 4,
                     ),
-                    title: Text(product.title.split('(').first.trim()),
-                    subtitle: Text(product.description),
+                    title: Text(
+                      product.title.split('(').first.trim(),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    subtitle: Text(
+                      product.description,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                     trailing: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
                           product.price,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                         ),
                       ],
                     ),
@@ -375,16 +398,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
+      builder: (context) => Center(
         child: Card(
           child: Padding(
-            padding: EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Processing donation...'),
+                CircularProgressIndicator(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Processing donation...',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
               ],
             ),
           ),
