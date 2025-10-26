@@ -154,24 +154,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ],
           ),
-
-          // Debug info (remove in production)
-          if (_isIAPInitialized || !_iapService.isAvailable)
-            _buildSection(
-              'Debug Info',
-              [
-                ListTile(
-                  title: const Text('IAP Status'),
-                  subtitle: Text(
-                    'Available: ${_iapService.isAvailable}\n'
-                    'Products: ${_iapService.products.length}\n'
-                    'Initialized: $_isIAPInitialized',
-                  ),
-                  isThreeLine: true,
-                ),
-              ],
-            ),
-
           const SizedBox(height: 24),
           Center(
             child: Text(
