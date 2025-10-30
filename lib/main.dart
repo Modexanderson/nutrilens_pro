@@ -5,10 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'core/theme/app_theme.dart';
-import 'data/services/ad_service.dart';
-import 'data/services/storage_service.dart';
-import 'presentation/screens/home_screen.dart';
+import 'theme/app_theme.dart';
+import 'services/storage_service.dart';
+import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
