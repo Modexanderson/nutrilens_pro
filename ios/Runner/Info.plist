@@ -49,9 +49,7 @@
 		<!-- TODO: Replace with your actual AdMob App ID -->
 		<key>GADApplicationIdentifier</key>
 		<string>ca-app-pub-5507149125881523~8162773116</string>
-		<!-- App Tracking Transparency -->
-		<key>NSUserTrackingUsageDescription</key>
-		<string>This identifier will be used to deliver personalized ads to you.</string>
+		
 		<!-- Required for iOS 14+ -->
 		<key>SKAdNetworkItems</key>
 		<array>

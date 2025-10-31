@@ -93,9 +93,7 @@ class _ScannerScreenState extends State<ScannerScreen>
     try {
       Product? product = StorageService.getCachedProduct(barcode);
 
-      if (product == null) {
-        product = await _apiService.getProductByBarcode(barcode);
-      }
+      product ??= await _apiService.getProductByBarcode(barcode);
 
       if (!mounted) return;
 

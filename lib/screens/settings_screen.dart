@@ -1,8 +1,9 @@
 // lib/presentation/screens/settings_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import '../main.dart';
 import '../services/iap_service.dart';
 
@@ -224,7 +225,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             'This could be because:\n'
             '• Your device doesn\'t support in-app purchases\n'
             '• You\'re using a simulator/emulator\n'
-            '• The products haven\'t been approved yet\n'
+            '• The products haven\'t been configured in RevenueCat\n'
             '• Network connectivity issues',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
@@ -265,10 +266,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           content: Text(
             'No donation options are currently available.\n\n'
-            'Please make sure the in-app purchases are:\n'
-            '• Approved in App Store Connect (not in Draft status)\n'
-            '• Available in your region\n'
-            '• Configured with correct Product IDs',
+            'Please make sure:\n'
+            '• Products are configured in RevenueCat Dashboard\n'
+            '• Products are added to an Offering\n'
+            '• Products are approved in App Store Connect\n'
+            '• Products are available in your region',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           actions: [
@@ -334,7 +336,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          product.price,
+                          product.priceString,
                           style: Theme.of(context)
                               .textTheme
                               .titleLarge
@@ -365,7 +367,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Future<void> _processDonation(ProductDetails product) async {
+  Future<void> _processDonation(StoreProduct product) async {
     if (_iapService.isPurchasePending) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -403,25 +405,65 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
 
     try {
-      await _iapService.buyProduct(product);
+      final success = await _iapService.buyProduct(product);
 
       if (mounted) {
         Navigator.pop(context); // Close loading dialog
 
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text('Thank you for your support! ❤️'),
+                  ),
+                ],
+              ),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Purchase completed but could not be verified'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } on PlatformException catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+
+        final errorCode = PurchasesErrorHelper.getErrorCode(e);
+        String message = 'Donation failed';
+
+        if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
+          message = 'Purchase cancelled';
+        } else if (errorCode == PurchasesErrorCode.purchaseNotAllowedError) {
+          message = 'Purchase not allowed on this device';
+        } else {
+          message = 'Donation failed: ${e.message ?? 'Unknown error'}';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text('Thank you for your support! ❤️'),
-                ),
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text(message)),
               ],
             ),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
