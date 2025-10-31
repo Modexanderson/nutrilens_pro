@@ -14,7 +14,51 @@
 
   ],
   "products" : [
-
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "6754198001",
+      "localizations" : [
+        {
+          "description" : "Support us with a small donation",
+          "displayName" : "Small Donation",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "donation_small",
+      "referenceName" : "Small Donation",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "2.99",
+      "familyShareable" : false,
+      "internalID" : "6754198002",
+      "localizations" : [
+        {
+          "description" : "Support us with a medium donation",
+          "displayName" : "Medium Donation",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "donation_medium",
+      "referenceName" : "Medium Donation",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "6754198003",
+      "localizations" : [
+        {
+          "description" : "Support us with a large donation",
+          "displayName" : "Large Donation",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "donation_large",
+      "referenceName" : "Large Donation",
+      "type" : "Consumable"
+    }
   ],
   "settings" : {
     "_applicationInternalID" : "6754198852",
