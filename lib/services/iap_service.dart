@@ -12,7 +12,7 @@ class IAPService {
 
   // TODO: Replace with your actual RevenueCat API Keys
   // Get them from: https://app.revenuecat.com/
-  static const String _revenueCatApiKeyIOS = 'appl_YOUR_IOS_KEY_HERE';
+  static const String _revenueCatApiKeyIOS = 'appl_ZJipwEgzfKCIPkWBLWRvLNhHVNE';
   static const String _revenueCatApiKeyAndroid = 'goog_YOUR_ANDROID_KEY_HERE';
 
   // Product IDs - must match App Store Connect AND RevenueCat Dashboard
