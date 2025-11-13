@@ -65,6 +65,8 @@
     "_developerTeamID" : "TGFXYW884F",
     "_failTransactionsEnabled" : false,
     "_lastSynchronizedDate" : 783330062.91507006,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
     "_storeKitErrors" : [
       {
         "current" : null,
