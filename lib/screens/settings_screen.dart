@@ -136,7 +136,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     context: context,
                     applicationName: 'NutriLens Pro',
                     applicationVersion: '1.0.0',
-                    applicationIcon: const FlutterLogo(size: 48),
+                    applicationIcon:
+                        Image.asset('assets/icons/app_icon.png', width: 48),
                   );
                 },
               ),
@@ -454,7 +455,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       applicationName: 'NutriLens Pro',
       applicationVersion: '1.0.0',
-      applicationIcon: const FlutterLogo(size: 48),
+      applicationIcon: Image.asset('assets/icons/app_icon.png', width: 48),
       children: [
         const Text(
           'NutriLens Pro helps you make informed food choices by providing detailed nutrition information through barcode scanning.',
@@ -623,7 +624,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 //                     context: context,
 //                     applicationName: 'NutriLens Pro',
 //                     applicationVersion: '1.0.0',
-//                     applicationIcon: const FlutterLogo(size: 48),
+//                     applicationIcon: const Image.assets('assets/icons/app_icon.png' size: 48)
 //                   );
 //                 },
 //               ),
@@ -982,7 +983,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 //       context: context,
 //       applicationName: 'NutriLens Pro',
 //       applicationVersion: '1.0.0',
-//       applicationIcon: const FlutterLogo(size: 48),
+//       applicationIcon: const Image.assets('assets/icons/app_icon.png' size: 48)
 //       children: [
 //         const Text(
 //           'NutriLens Pro helps you make informed food choices by providing detailed nutrition information through barcode scanning.',
