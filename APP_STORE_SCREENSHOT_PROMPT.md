@@ -40,8 +40,8 @@ Create a Python script that:
 - Adds drop shadow
 - Places screenshot on gradient background matching app's primary color
 - Adds caption and subtitle text at top
-- Outputs correct sizes:
-  - iPhone 6.7": 1290x2796
+- Outputs correct sizes (Apple App Store accepted dimensions):
+  - iPhone 6.7": 1284x2778 (or 1242x2688 for 6.5")
   - iPad 12.9": 2048x2732
 
 ## 5. Captions for Screenshots
@@ -92,10 +92,14 @@ Create a Python script that:
 ### Python Script Requirements:
 ```python
 # Key configurations
+# Apple App Store accepted dimensions:
+# - iPhone 6.7": 1284 x 2778px (portrait) or 2778 x 1284px (landscape)
+# - iPhone 6.5": 1242 x 2688px (portrait) or 2688 x 1242px (landscape)
+# - iPad 12.9": 2048 x 2732px (portrait) or 2732 x 2048px (landscape)
 DEVICES = {
     "iphone_67": {
-        "output_width": 1290,
-        "output_height": 2796,
+        "output_width": 1284,
+        "output_height": 2778,
         "status_bar_crop": 110,  # Adjust based on device
         "corner_radius_ratio": 0.08,
         "phone_height_ratio": 0.62,

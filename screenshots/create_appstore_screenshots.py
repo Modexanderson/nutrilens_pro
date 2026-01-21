@@ -36,10 +36,14 @@ SCREENSHOTS = [
 ]
 
 # Device configurations
+# Apple App Store accepted dimensions:
+# - iPhone 6.7": 1284 x 2778px (portrait) or 2778 x 1284px (landscape)
+# - iPhone 6.5": 1242 x 2688px (portrait) or 2688 x 1242px (landscape)
+# - iPad 12.9": 2048 x 2732px (portrait) or 2732 x 2048px (landscape)
 DEVICES = {
     "iphone_67": {
-        "output_width": 1290,
-        "output_height": 2796,
+        "output_width": 1284,
+        "output_height": 2778,
         "status_bar_crop": 90,  # Android status bar height to crop (increased)
         "corner_radius_ratio": 0.08,
         "phone_height_ratio": 0.80,
