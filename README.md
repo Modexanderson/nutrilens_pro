@@ -1,31 +1,57 @@
-# 🥗 NutriLens Pro
+# NutriLens Pro
 
 **Scan. Know. Choose Better.**
 
 A professional Flutter food scanner app that retrieves detailed nutrition and product information using barcode scanning.
 
-## ✨ Features
+## Screenshots
+
+### iPhone
+<p align="center">
+  <img src="screenshots/appstore_ready/iphone/01_01_scan_screen.png" width="200" />
+  <img src="screenshots/appstore_ready/iphone/02_02_search_screen.png" width="200" />
+  <img src="screenshots/appstore_ready/iphone/03_03_tracker_screen.png" width="200" />
+  <img src="screenshots/appstore_ready/iphone/04_04_profile_screen.png" width="200" />
+</p>
+<p align="center">
+  <img src="screenshots/appstore_ready/iphone/05_05_product_detail.png" width="200" />
+</p>
+
+### iPad
+<p align="center">
+  <img src="screenshots/appstore_ready/ipad/01_01_scan_screen.png" width="300" />
+  <img src="screenshots/appstore_ready/ipad/02_02_search_screen.png" width="300" />
+</p>
+<p align="center">
+  <img src="screenshots/appstore_ready/ipad/03_03_tracker_screen.png" width="300" />
+  <img src="screenshots/appstore_ready/ipad/04_04_profile_screen.png" width="300" />
+</p>
+<p align="center">
+  <img src="screenshots/appstore_ready/ipad/05_05_product_detail.png" width="300" />
+</p>
+
+## Features
 
 ### Core Features
-- 📸 **Barcode Scanning** - Camera-based barcode scanning with mobile_scanner
-- 🔍 **Product Information** - Detailed nutrition facts, ingredients, allergens
-- 📊 **Nutri-Score** - Visual nutrition grade from A to E
-- 📜 **Scan History** - Save and review scanned products
-- ⭐ **Favorites** - Mark and quickly access favorite products
-- 🔎 **Search** - Find products by name or category
-- 🎨 **Themes** - Light and dark mode support
-- 💾 **Offline Cache** - Recent scans available offline
-- 📤 **Share** - Share product information
+- **Barcode Scanning** - Camera-based barcode scanning with mobile_scanner
+- **Product Information** - Detailed nutrition facts, ingredients, allergens
+- **Nutri-Score** - Visual nutrition grade from A to E
+- **Daily Tracker** - Track your daily nutritional intake
+- **Search** - Find products by name or category
+- **Product Comparison** - Compare nutrition between products
+- **User Profile** - Set and track personalized nutrition goals
+- **Themes** - Light and dark mode support
+- **Offline Cache** - Recent scans available offline
+- **Share** - Share product information
 
 ### Monetization
-- 📱 **Google AdMob** - Banner and interstitial ads
-- 💰 **In-App Purchases** - Donation system via Apple/Google IAP
+- **Google AdMob** - Banner and interstitial ads
 
 ### Data Source
-- 🌍 **Open Food Facts API** - Free, open-source food database with millions of products
-- 🔄 **Real-time Data** - Up-to-date product information
+- **Open Food Facts API** - Free, open-source food database with millions of products
+- **Real-time Data** - Up-to-date product information
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 nutrilens_pro/
@@ -36,32 +62,39 @@ nutrilens_pro/
 │   │   ├── theme/
 │   │   │   └── app_theme.dart
 │   │   └── utils/
-│   ├── data/
-│   │   ├── models/
-│   │   │   ├── product_model.dart
-│   │   │   └── product_model.g.dart
-│   │   ├── services/
-│   │   │   ├── api_service.dart
-│   │   │   ├── storage_service.dart
-│   │   │   ├── ad_service.dart
-│   │   │   └── iap_service.dart
-│   │   └── repositories/
-│   └── presentation/
-│       ├── screens/
-│       │   ├── splash_screen.dart
-│       │   ├── home_screen.dart
-│       │   ├── scanner_screen.dart
-│       │   ├── product_detail_screen.dart
-│       │   ├── history_screen.dart
-│       │   ├── favorites_screen.dart
-│       │   └── settings_screen.dart
-│       ├── widgets/
-│       │   └── product_card.dart
-│       └── providers/
+│   ├── models/
+│   │   ├── product_model.dart
+│   │   ├── daily_log_model.dart
+│   │   └── user_profile_model.dart
+│   ├── providers/
+│   │   ├── comparison_provider.dart
+│   │   ├── daily_tracker_provider.dart
+│   │   ├── search_provider.dart
+│   │   └── user_profile_provider.dart
+│   ├── services/
+│   │   ├── api_service.dart
+│   │   ├── storage_service.dart
+│   │   ├── ad_service.dart
+│   │   └── demo_data_service.dart
+│   ├── screens/
+│   │   ├── splash_screen.dart
+│   │   ├── onboarding_screen.dart
+│   │   ├── demo_home_screen.dart
+│   │   ├── demo_scanner_screen.dart
+│   │   ├── product_detail_screen.dart
+│   │   ├── search_screen.dart
+│   │   ├── tracker_screen.dart
+│   │   ├── compare_screen.dart
+│   │   └── profile_screen.dart
+│   └── widgets/
+│       ├── product_card.dart
+│       ├── log_food_sheet.dart
+│       └── nutrition_progress.dart
 └── assets/
+    └── demo_images/
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -93,7 +126,7 @@ flutter pub run build_runner build --delete-conflicting-outputs
 flutter run
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 ### 1. Google AdMob Setup
 
@@ -110,7 +143,7 @@ flutter run
 </manifest>
 ```
 
-2. Update Ad Unit IDs in `lib/data/services/ad_service.dart`:
+2. Update Ad Unit IDs in `lib/services/ad_service.dart`:
 ```dart
 static String get bannerAdUnitId {
   if (Platform.isAndroid) {
@@ -136,38 +169,7 @@ static String get bannerAdUnitId {
 
 **Get your AdMob IDs:** https://apps.admob.com/
 
-### 2. In-App Purchase Setup
-
-#### Android (Google Play)
-
-1. Create your app in Google Play Console
-2. Set up In-App Products (Managed Products):
-   - `donation_small` - $0.99
-   - `donation_medium` - $2.99
-   - `donation_large` - $4.99
-
-3. Add billing permission in `android/app/src/main/AndroidManifest.xml`:
-```xml
-<uses-permission android:name="com.android.vending.BILLING" />
-```
-
-4. Configure your app's license key in Google Play Console
-
-#### iOS (App Store)
-
-1. Create your app in App Store Connect
-2. Set up In-App Purchases (Consumable):
-   - `donation_small` - $0.99
-   - `donation_medium` - $2.99
-   - `donation_large` - $4.99
-
-3. Update Product IDs in `lib/data/services/iap_service.dart` if needed
-
-**Resources:**
-- Google Play: https://play.google.com/console
-- App Store Connect: https://appstoreconnect.apple.com
-
-### 3. Permissions
+### 2. Permissions
 
 #### Android (`android/app/src/main/AndroidManifest.xml`)
 ```xml
@@ -181,7 +183,7 @@ static String get bannerAdUnitId {
 <string>We need camera access to scan product barcodes</string>
 ```
 
-## 📦 API Integration
+## API Integration
 
 The app uses **Open Food Facts API** - a free, open-source food database.
 
@@ -221,7 +223,7 @@ GET https://world.openfoodfacts.org/cgi/search.pl?search_terms={query}&json=true
 
 **API Documentation:** https://world.openfoodfacts.org/data
 
-## 🎨 App Icon & Branding
+## App Icon & Branding
 
 ### App Icon
 Create app icons using Flutter Launcher Icons package:
@@ -233,9 +235,9 @@ flutter pub run flutter_launcher_icons
 ```
 
 ### Splash Screen
-The splash screen is defined in `lib/presentation/screens/splash_screen.dart`. Customize colors and logo as needed.
+The splash screen is defined in `lib/screens/splash_screen.dart`. Customize colors and logo as needed.
 
-## 📱 Building for Release
+## Building for Release
 
 ### Android
 
@@ -292,7 +294,7 @@ open ios/Runner.xcworkspace
 flutter build ipa --release
 ```
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Run tests
@@ -305,31 +307,30 @@ flutter test --coverage
 flutter drive --target=test_driver/app.dart
 ```
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📧 Support
+## Support
 
 For support, email support@nutrilenspro.com or open an issue on GitHub.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **Open Food Facts** - For providing the free food database API
 - **Flutter Community** - For amazing packages and support
 - **Contributors** - Thank you to all who have contributed!
 
-## 📊 App Store Submission Checklist
+## App Store Submission Checklist
 
 ### Before Submission
 
 - [ ] Test on real devices (Android & iOS)
 - [ ] Replace test AdMob IDs with production IDs
-- [ ] Configure In-App Purchase products
 - [ ] Add Privacy Policy URL
 - [ ] Add Terms of Service URL
 - [ ] Create App Store screenshots (multiple device sizes)
@@ -354,7 +355,7 @@ For support, email support@nutrilenspro.com or open an issue on GitHub.
 - Complete App Store listing
 - Submit for review
 
-## 🔮 Future Enhancements
+## Future Enhancements
 
 - [ ] Nutrition goal tracking
 - [ ] Alternative product suggestions
@@ -369,6 +370,4 @@ For support, email support@nutrilenspro.com or open an issue on GitHub.
 
 ---
 
-**Made with ❤️ for healthier food choices**
-
-*NutriLens Pro - Scan. Know. Choose Better.*
+**NutriLens Pro - Scan. Know. Choose Better.**
