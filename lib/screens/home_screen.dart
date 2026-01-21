@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'scanner_screen.dart';
-import 'history_screen.dart';
-import 'favorites_screen.dart';
-import 'settings_screen.dart';
+import 'search_screen.dart';
+import 'tracker_screen.dart';
+import 'profile_screen.dart';
 import '../services/ad_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -23,9 +23,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   final List<Widget> _screens = const [
     ScannerScreen(),
-    HistoryScreen(),
-    FavoritesScreen(),
-    SettingsScreen(),
+    SearchScreen(),
+    TrackerScreen(),
+    ProfileScreen(),
   ];
 
   @override
@@ -85,19 +85,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 label: 'Scan',
               ),
               NavigationDestination(
-                icon: Icon(Icons.history_outlined),
-                selectedIcon: Icon(Icons.history),
-                label: 'History',
+                icon: Icon(Icons.search_outlined),
+                selectedIcon: Icon(Icons.search),
+                label: 'Search',
               ),
               NavigationDestination(
-                icon: Icon(Icons.favorite_outline),
-                selectedIcon: Icon(Icons.favorite),
-                label: 'Favorites',
+                icon: Icon(Icons.track_changes_outlined),
+                selectedIcon: Icon(Icons.track_changes),
+                label: 'Tracker',
               ),
               NavigationDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings),
-                label: 'Settings',
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person),
+                label: 'Profile',
               ),
             ],
           ),

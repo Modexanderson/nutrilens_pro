@@ -1,22 +1,26 @@
 // lib/presentation/screens/product_detail_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/product_model.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/log_food_sheet.dart';
+import '../providers/user_profile_provider.dart';
 
-class ProductDetailScreen extends StatefulWidget {
+class ProductDetailScreen extends ConsumerStatefulWidget {
   final Product product;
 
   const ProductDetailScreen({super.key, required this.product});
 
   @override
-  State<ProductDetailScreen> createState() => _ProductDetailScreenState();
+  ConsumerState<ProductDetailScreen> createState() =>
+      _ProductDetailScreenState();
 }
 
-class _ProductDetailScreenState extends State<ProductDetailScreen> {
+class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   late bool _isFavorite;
 
   @override
@@ -54,10 +58,20 @@ Scanned with NutriLens Pro
 
   @override
   Widget build(BuildContext context) {
+    // Check for allergen warnings
+    final matchingAllergens = ref
+        .watch(userProfileProvider.notifier)
+        .checkProductAllergens(widget.product.allergens);
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           _buildAppBar(),
+          // Allergen warning banner
+          if (matchingAllergens.isNotEmpty)
+            SliverToBoxAdapter(
+              child: _buildAllergenWarningBanner(matchingAllergens),
+            ),
           SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,7 +86,83 @@ Scanned with NutriLens Pro
                   const Divider(height: 32),
                   _buildAllergens(),
                 ],
-                const SizedBox(height: 24),
+                const SizedBox(height: 80), // Space for FAB
+              ],
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => LogFoodSheet.show(context, widget.product),
+        icon: const Icon(Icons.add),
+        label: const Text('Log This'),
+      ),
+    );
+  }
+
+  Widget _buildAllergenWarningBanner(List<String> matchingAllergens) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red[200]!),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            color: Colors.red[700],
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Allergen Warning',
+                  style: TextStyle(
+                    color: Colors.red[700],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'This product contains allergens you\'re avoiding:',
+                  style: TextStyle(
+                    color: Colors.red[700],
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: matchingAllergens.map((allergen) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red[100],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        allergen,
+                        style: TextStyle(
+                          color: Colors.red[800],
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
               ],
             ),
           ),

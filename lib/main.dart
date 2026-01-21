@@ -7,7 +7,18 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'theme/app_theme.dart';
 import 'services/storage_service.dart';
+import 'services/demo_data_service.dart';
 import 'screens/home_screen.dart';
+import 'screens/demo_home_screen.dart';
+import 'screens/onboarding_screen.dart';
+
+// ============================================
+// DEMO MODE FOR APP STORE SCREENSHOTS
+// Set to true to enable demo mode with mock data
+// Set to false for production release
+// ============================================
+const bool kDemoMode = false; // <-- CHANGE TO false BEFORE RELEASE!
+// ============================================
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +26,11 @@ void main() async {
   // Initialize Hive
   await Hive.initFlutter();
   await StorageService.init();
+
+  // Load demo data if in demo mode
+  if (kDemoMode) {
+    await DemoDataService.loadDemoData();
+  }
 
   // Initialize Mobile Ads
   await MobileAds.instance.initialize();
@@ -40,12 +56,50 @@ void main() async {
   );
 }
 
-class NutriLensProApp extends ConsumerWidget {
+class NutriLensProApp extends ConsumerStatefulWidget {
   const NutriLensProApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NutriLensProApp> createState() => _NutriLensProAppState();
+}
+
+class _NutriLensProAppState extends ConsumerState<NutriLensProApp> {
+  bool _showOnboarding = false;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboarding();
+  }
+
+  void _checkOnboarding() {
+    final isCompleted = StorageService.isOnboardingCompleted();
+    setState(() {
+      _showOnboarding = !isCompleted;
+      _initialized = true;
+    });
+  }
+
+  void _completeOnboarding() {
+    setState(() {
+      _showOnboarding = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
+
+    // In demo mode, skip onboarding and use demo home screen
+    Widget homeWidget;
+    if (kDemoMode) {
+      homeWidget = const DemoHomeScreen();
+    } else if (_showOnboarding) {
+      homeWidget = OnboardingScreen(onComplete: _completeOnboarding);
+    } else {
+      homeWidget = const HomeScreen();
+    }
 
     return MaterialApp(
       title: 'NutriLens Pro',
@@ -53,7 +107,11 @@ class NutriLensProApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
-      home: const HomeScreen(),
+      home: _initialized
+          ? homeWidget
+          : const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            ),
     );
   }
 }

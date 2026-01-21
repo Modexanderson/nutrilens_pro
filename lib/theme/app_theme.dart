@@ -5,12 +5,13 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Color Palette
-  static const primaryColor = Color(0xFF4CAF50);
-  static const secondaryColor = Color(0xFF8BC34A);
+  static const primaryColor = Color(0xFF13A364);
+  static const secondaryColor = Color(0xFF0D8050);
+  static const tertiaryColor = Color(0xFF1CC88A);
   static const accentColor = Color(0xFFFF9800);
   static const errorColor = Color(0xFFF44336);
   static const warningColor = Color(0xFFFFC107);
-  static const successColor = Color(0xFF4CAF50);
+  static const successColor = Color(0xFF13A364);
 
   // Light Theme Colors
   static const lightBackground = Color(0xFFFAFAFA);
@@ -33,10 +34,12 @@ class AppTheme {
       colorScheme: const ColorScheme.light(
         primary: primaryColor,
         secondary: secondaryColor,
+        tertiary: tertiaryColor,
         surface: lightSurface,
         error: errorColor,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
+        onTertiary: Colors.white,
         onSurface: lightTextPrimary,
         onError: Colors.white,
       ),
@@ -185,10 +188,12 @@ class AppTheme {
       colorScheme: const ColorScheme.dark(
         primary: primaryColor,
         secondary: secondaryColor,
+        tertiary: tertiaryColor,
         surface: darkSurface,
         error: errorColor,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
+        onTertiary: Colors.white,
         onSurface: darkTextPrimary,
         onError: Colors.white,
       ),

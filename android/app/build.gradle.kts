@@ -27,7 +27,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.nutrilens.pro"
-    compileSdk = 35
+    compileSdk = 36  // Changed from 35
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -45,8 +45,8 @@ android {
 
     defaultConfig {
         applicationId = "com.nutrilens.pro"
-        minSdk = 21
-        targetSdk = 34
+        minSdk = flutter.minSdkVersion
+        targetSdk = 35  // You can also update this to 35 or 36
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
         multiDexEnabled = true

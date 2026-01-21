@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:apps.apple.com)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter devices:*)",
+      "Bash(flutter build:*)",
+      "Bash(adb -s emulator-5554 install:*)",
+      "Bash(adb:*)",
+      "WebFetch(domain:screenshots.pro)",
+      "WebFetch(domain:mockuphone.com)",
+      "Bash(pip show:*)",
+      "Bash(py:*)",
+      "Bash(curl:*)",
+      "WebFetch(domain:world.openfoodfacts.org)",
+      "Bash(python create_appstore_screenshots.py:*)"
+    ]
+  }
+}

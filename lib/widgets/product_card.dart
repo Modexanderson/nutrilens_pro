@@ -1,27 +1,40 @@
 // lib/presentation/widgets/product_card.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import '../models/product_model.dart';
+import '../providers/comparison_provider.dart';
+import 'nutrition_progress.dart';
 
-class ProductCard extends StatelessWidget {
+class ProductCard extends ConsumerWidget {
   final Product product;
   final VoidCallback onTap;
+  final bool showCompare;
+  final bool showNutritionBars;
 
   const ProductCard({
     super.key,
     required this.product,
     required this.onTap,
+    this.showCompare = true,
+    this.showNutritionBars = true,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isInComparison =
+        ref.watch(comparisonProvider.notifier).isInComparison(product.barcode);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
+        onLongPress: showCompare
+            ? () => _showContextMenu(context, ref)
+            : null,
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -67,14 +80,94 @@ class ProductCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                    // Nutrition mini bars
+                    if (showNutritionBars && product.nutriments != null) ...[
+                      const SizedBox(height: 8),
+                      MiniMacroBar(
+                        protein: product.nutriments!.proteins ?? 0,
+                        carbs: product.nutriments!.carbohydrates ?? 0,
+                        fat: product.nutriments!.fat ?? 0,
+                      ),
+                    ],
                   ],
                 ),
               ),
 
               const SizedBox(width: 8),
-              const Icon(Icons.arrow_forward_ios, size: 16),
+              Column(
+                children: [
+                  if (showCompare)
+                    IconButton(
+                      icon: Icon(
+                        isInComparison
+                            ? Icons.compare_arrows
+                            : Icons.compare_arrows_outlined,
+                        color: isInComparison
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        ref
+                            .read(comparisonProvider.notifier)
+                            .toggleProduct(product);
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              isInComparison
+                                  ? 'Removed from comparison'
+                                  : 'Added to comparison',
+                            ),
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: isInComparison
+                          ? 'Remove from compare'
+                          : 'Add to compare',
+                    ),
+                  const SizedBox(height: 8),
+                  const Icon(Icons.arrow_forward_ios, size: 16),
+                ],
+              ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showContextMenu(BuildContext context, WidgetRef ref) {
+    final isInComparison =
+        ref.read(comparisonProvider.notifier).isInComparison(product.barcode);
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(
+                isInComparison
+                    ? Icons.compare_arrows
+                    : Icons.compare_arrows_outlined,
+              ),
+              title: Text(
+                isInComparison
+                    ? 'Remove from comparison'
+                    : 'Add to comparison',
+              ),
+              onTap: () {
+                ref.read(comparisonProvider.notifier).toggleProduct(product);
+                Navigator.pop(context);
+              },
+            ),
+          ],
         ),
       ),
     );
