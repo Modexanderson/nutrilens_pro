@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../models/product_model.dart';
 import '../services/storage_service.dart';
+import '../services/ad_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/log_food_sheet.dart';
 import '../providers/user_profile_provider.dart';
@@ -22,11 +24,38 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   late bool _isFavorite;
+  BannerAd? _bannerAd;
+  bool _isBannerLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _isFavorite = StorageService.isFavorite(widget.product.barcode);
+    _loadBannerAd();
+  }
+
+  void _loadBannerAd() {
+    _bannerAd = BannerAd(
+      adUnitId: AdService.bannerAdUnitId,
+      size: AdSize.mediumRectangle,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          if (mounted) setState(() => _isBannerLoaded = true);
+        },
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+          _bannerAd = null;
+        },
+      ),
+    );
+    _bannerAd!.load();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
   }
 
   void _toggleFavorite() async {
@@ -79,6 +108,14 @@ Scanned with NutriLens Pro
                 _buildProductHeader(),
                 const Divider(height: 32),
                 _buildNutritionInfo(),
+                // In-content ad placement
+                if (_isBannerLoaded && _bannerAd != null)
+                  Container(
+                    alignment: Alignment.center,
+                    margin: const EdgeInsets.symmetric(vertical: 16),
+                    height: 250,
+                    child: AdWidget(ad: _bannerAd!),
+                  ),
                 const Divider(height: 32),
                 _buildIngredients(),
                 if (widget.product.allergens != null &&

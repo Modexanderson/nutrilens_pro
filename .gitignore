@@ -44,3 +44,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase service account key (NEVER commit)
+serviceAccountKey.json
+**/serviceAccountKey.json
+
+# Google Services config (contains API keys)
+# Uncomment if you don't want these tracked:
+# android/app/google-services.json
+# ios/Runner/GoogleService-Info.plist

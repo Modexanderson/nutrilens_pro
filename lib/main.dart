@@ -1,59 +1,65 @@
 // lib/main.dart
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'services/storage_service.dart';
-import 'services/demo_data_service.dart';
+import 'services/notification_service.dart';
 import 'screens/home_screen.dart';
-import 'screens/demo_home_screen.dart';
 import 'screens/onboarding_screen.dart';
 
-// ============================================
-// DEMO MODE FOR APP STORE SCREENSHOTS
-// Set to true to enable demo mode with mock data
-// Set to false for production release
-// ============================================
-const bool kDemoMode = false; // <-- CHANGE TO false BEFORE RELEASE!
-// ============================================
-
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded<Future<void>>(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Hive
-  await Hive.initFlutter();
-  await StorageService.init();
+    // Initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
 
-  // Load demo data if in demo mode
-  if (kDemoMode) {
-    await DemoDataService.loadDemoData();
-  }
+    // Set up Crashlytics
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
-  // Initialize Mobile Ads
-  await MobileAds.instance.initialize();
+    // Initialize Hive
+    await Hive.initFlutter();
+    await StorageService.init();
 
-  // Set system UI overlay style
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ),
-  );
+    // Initialize Mobile Ads
+    await MobileAds.instance.initialize();
 
-  // Set preferred orientations
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+    // Initialize notifications
+    await NotificationService.instance.init();
 
-  runApp(
-    const ProviderScope(
-      child: NutriLensProApp(),
-    ),
-  );
+    // Set system UI overlay style
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+    );
+
+    // Set preferred orientations
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+
+    runApp(
+      const ProviderScope(
+        child: NutriLensProApp(),
+      ),
+    );
+  }, (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+  });
 }
 
 class NutriLensProApp extends ConsumerStatefulWidget {
@@ -66,6 +72,10 @@ class NutriLensProApp extends ConsumerStatefulWidget {
 class _NutriLensProAppState extends ConsumerState<NutriLensProApp> {
   bool _showOnboarding = false;
   bool _initialized = false;
+
+  static FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+  static FirebaseAnalyticsObserver observer =
+      FirebaseAnalyticsObserver(analytics: analytics);
 
   @override
   void initState() {
@@ -91,11 +101,8 @@ class _NutriLensProAppState extends ConsumerState<NutriLensProApp> {
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
 
-    // In demo mode, skip onboarding and use demo home screen
     Widget homeWidget;
-    if (kDemoMode) {
-      homeWidget = const DemoHomeScreen();
-    } else if (_showOnboarding) {
+    if (_showOnboarding) {
       homeWidget = OnboardingScreen(onComplete: _completeOnboarding);
     } else {
       homeWidget = const HomeScreen();
@@ -107,6 +114,7 @@ class _NutriLensProAppState extends ConsumerState<NutriLensProApp> {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
+      navigatorObservers: [observer],
       home: _initialized
           ? homeWidget
           : const Scaffold(

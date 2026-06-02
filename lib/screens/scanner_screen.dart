@@ -2,8 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
+import '../services/connectivity_service.dart';
 import '../models/product_model.dart';
 import 'product_detail_screen.dart';
 
@@ -32,8 +34,6 @@ class _ScannerScreenState extends State<ScannerScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-
-    // Reinitialize when app comes back to foreground
     if (state == AppLifecycleState.resumed) {
       _initializeScanner();
     }
@@ -43,16 +43,13 @@ class _ScannerScreenState extends State<ScannerScreen>
     setState(() => _isInitializing = true);
 
     try {
-      // Dispose existing controller if any (no await needed)
       _controller?.dispose();
 
-      // Create new controller - mobile_scanner handles permissions internally
       _controller = MobileScannerController(
         detectionSpeed: DetectionSpeed.normal,
         facing: CameraFacing.back,
       );
 
-      // Start the scanner
       await _controller!.start();
 
       if (mounted) {
@@ -61,8 +58,12 @@ class _ScannerScreenState extends State<ScannerScreen>
           _isInitializing = false;
         });
       }
-    } catch (e) {
-      debugPrint('Scanner initialization error: $e');
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        stack,
+        reason: 'Scanner initialization failed',
+      );
       if (mounted) {
         setState(() {
           _permissionGranted = false;
@@ -75,7 +76,7 @@ class _ScannerScreenState extends State<ScannerScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _controller?.dispose(); // No await here
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -91,9 +92,22 @@ class _ScannerScreenState extends State<ScannerScreen>
     setState(() => _isProcessing = true);
 
     try {
+      // Check cache first
       Product? product = StorageService.getCachedProduct(barcode);
 
-      product ??= await _apiService.getProductByBarcode(barcode);
+      // Check connectivity before API call
+      if (product == null) {
+        final isConnected = await ConnectivityService.instance.isConnected;
+        if (!isConnected) {
+          if (mounted) {
+            _showErrorSnackBar(
+                'No internet connection. Only cached products are available offline.');
+          }
+          setState(() => _isProcessing = false);
+          return;
+        }
+        product = await _apiService.getProductByBarcode(barcode);
+      }
 
       if (!mounted) return;
 
@@ -107,11 +121,20 @@ class _ScannerScreenState extends State<ScannerScreen>
           ),
         );
       } else {
-        _showErrorSnackBar('Product not found. Try another barcode.');
+        _showProductNotFound(barcode);
       }
-    } catch (e) {
+    } on NetworkException catch (e) {
       if (mounted) {
-        _showErrorSnackBar('Error scanning barcode: $e');
+        _showErrorSnackBar(e.message);
+      }
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        stack,
+        reason: 'Barcode scan error for: $barcode',
+      );
+      if (mounted) {
+        _showErrorSnackBar('Something went wrong. Please try again.');
       }
     } finally {
       if (mounted) {
@@ -120,12 +143,97 @@ class _ScannerScreenState extends State<ScannerScreen>
     }
   }
 
+  void _showProductNotFound(String barcode) {
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Icon(
+              Icons.search_off_rounded,
+              size: 64,
+              color: Colors.orange[400],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Product Not Found',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Barcode: $barcode',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'This product isn\'t in our database yet. Open Food Facts is community-driven '
+              'and may not have every product.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                icon: const Icon(Icons.qr_code_scanner),
+                label: const Text('Scan Another Product'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('Dismiss'),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: 'Dismiss',
+          textColor: Colors.white,
+          onPressed: () {},
+        ),
       ),
     );
   }
@@ -209,14 +317,16 @@ class _ScannerScreenState extends State<ScannerScreen>
             ),
             const SizedBox(height: 12),
             const Text(
-              'Please grant camera permission to scan barcodes',
+              'Please grant camera permission to scan barcodes. '
+              'You can enable it in your device settings.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
+            ElevatedButton.icon(
               onPressed: _initializeScanner,
-              child: const Text('Try Again'),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Try Again'),
             ),
           ],
         ),

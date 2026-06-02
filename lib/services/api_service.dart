@@ -1,7 +1,9 @@
-// lib/data/services/api_services.dart
+// lib/services/api_service.dart
 
 import 'package:dio/dio.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import '../models/product_model.dart';
+import 'connectivity_service.dart';
 
 /// Open Food Facts API Service
 /// Free, open-source food database with millions of products
@@ -25,9 +27,19 @@ class ApiService {
           ),
         );
 
+  /// Check connectivity before making a request.
+  /// Throws [NetworkException] if offline.
+  Future<void> _ensureConnected() async {
+    final connected = await ConnectivityService.instance.isConnected;
+    if (!connected) {
+      throw NetworkException('No internet connection. Please check your network settings.');
+    }
+  }
+
   /// Fetch product by barcode
-  /// Example: GET /api/v2/product/3017620422003
   Future<Product?> getProductByBarcode(String barcode) async {
+    await _ensureConnected();
+
     try {
       final response = await _dio.get(
         '$baseUrl/product/$barcode',
@@ -53,18 +65,28 @@ class ApiService {
         return Product.fromJson(response.data);
       }
       return null;
-    } on DioException catch (e) {
-      print('API Error: ${e.message}');
-      return null;
-    } catch (e) {
-      print('Unexpected Error: $e');
-      return null;
+    } on DioException catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        stack,
+        reason: 'API getProductByBarcode failed for barcode: $barcode',
+      );
+      throw NetworkException(_friendlyDioError(e));
+    } catch (e, stack) {
+      if (e is NetworkException) rethrow;
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        stack,
+        reason: 'Unexpected error in getProductByBarcode',
+      );
+      throw NetworkException('Something went wrong. Please try again.');
     }
   }
 
   /// Search products by name or category
-  /// Example: GET /cgi/search.pl?search_terms=pizza&json=true
   Future<List<Product>> searchProducts(String query, {int page = 1}) async {
+    await _ensureConnected();
+
     try {
       final response = await _dio.get(
         searchUrl,
@@ -91,7 +113,7 @@ class ApiService {
               try {
                 return Product.fromJson(json);
               } catch (e) {
-                print('Error parsing product: $e');
+                // Skip malformed products silently
                 return null;
               }
             })
@@ -99,18 +121,29 @@ class ApiService {
             .toList();
       }
       return [];
-    } on DioException catch (e) {
-      print('Search Error: ${e.message}');
-      return [];
-    } catch (e) {
-      print('Unexpected Search Error: $e');
-      return [];
+    } on DioException catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        stack,
+        reason: 'Search failed for query: $query, page: $page',
+      );
+      throw NetworkException(_friendlyDioError(e));
+    } catch (e, stack) {
+      if (e is NetworkException) rethrow;
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        stack,
+        reason: 'Unexpected search error',
+      );
+      throw NetworkException('Search failed. Please try again.');
     }
   }
 
   /// Get products by category
   Future<List<Product>> getProductsByCategory(String category,
       {int page = 1}) async {
+    await _ensureConnected();
+
     try {
       final response = await _dio.get(
         searchUrl,
@@ -146,12 +179,45 @@ class ApiService {
             .toList();
       }
       return [];
-    } on DioException catch (e) {
-      print('Category Error: ${e.message}');
-      return [];
-    } catch (e) {
-      print('Unexpected Category Error: $e');
-      return [];
+    } on DioException catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        stack,
+        reason: 'Category search failed: $category',
+      );
+      throw NetworkException(_friendlyDioError(e));
+    } catch (e, stack) {
+      if (e is NetworkException) rethrow;
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        stack,
+        reason: 'Unexpected category error',
+      );
+      throw NetworkException('Failed to load category. Please try again.');
     }
   }
+
+  String _friendlyDioError(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return 'Connection timed out. Please check your internet and try again.';
+      case DioExceptionType.connectionError:
+        return 'Unable to connect. Please check your internet connection.';
+      case DioExceptionType.badResponse:
+        return 'Server error. Please try again later.';
+      default:
+        return 'Something went wrong. Please try again.';
+    }
+  }
+}
+
+/// Custom exception for network-related errors with user-friendly messages.
+class NetworkException implements Exception {
+  final String message;
+  NetworkException(this.message);
+
+  @override
+  String toString() => message;
 }

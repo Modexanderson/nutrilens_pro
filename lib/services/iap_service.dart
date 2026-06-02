@@ -1,9 +1,12 @@
-// lib/data/services/iap_service.dart
+// lib/services/iap_service.dart
+
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
 import 'package:in_app_purchase_storekit/store_kit_wrappers.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 class IAPService {
   static IAPService? _instance;
@@ -36,84 +39,68 @@ class IAPService {
   bool get isInitialized => _isInitialized;
 
   Future<void> initialize() async {
-    if (_isInitialized) {
-      print('IAP already initialized');
-      return;
-    }
+    if (_isInitialized) return;
 
     try {
-      // iOS-specific: Enable pending purchase handling
       if (Platform.isIOS) {
         final InAppPurchaseStoreKitPlatformAddition iosAddition = _inAppPurchase
             .getPlatformAddition<InAppPurchaseStoreKitPlatformAddition>();
         await iosAddition.setDelegate(ExamplePaymentQueueDelegate());
       }
 
-      // Check if IAP is available
       _available = await _inAppPurchase.isAvailable();
-      print('IAP Available: $_available');
 
       if (!_available) {
-        print('In-App Purchase not available on this device');
         _isInitialized = true;
         return;
       }
 
-      // Listen to purchase updates BEFORE loading products
       _subscription = _inAppPurchase.purchaseStream.listen(
         _onPurchaseUpdate,
-        onDone: () => print('Purchase stream done'),
-        onError: (error) => print('Purchase Stream Error: $error'),
+        onDone: () => debugPrint('Purchase stream done'),
+        onError: (error) {
+          FirebaseCrashlytics.instance.log('Purchase stream error: $error');
+        },
       );
 
-      // Load products
       await loadProducts();
-
       _isInitialized = true;
-      print('✓ IAP initialization complete');
-    } catch (e) {
-      print('❌ IAP initialization error: $e');
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(
+        e, stack,
+        reason: 'IAP initialization failed',
+      );
       _available = false;
       _isInitialized = true;
     }
   }
 
   Future<void> loadProducts() async {
-    if (!_available) {
-      print('Cannot load products: IAP not available');
-      return;
-    }
+    if (!_available) return;
 
     try {
-      print('Querying products: $_productIds');
-
       final ProductDetailsResponse response =
           await _inAppPurchase.queryProductDetails(_productIds);
 
       if (response.error != null) {
-        print('❌ Error loading products: ${response.error!.message}');
-        print('Error code: ${response.error!.code}');
+        FirebaseCrashlytics.instance.log(
+          'IAP product load error: ${response.error!.message}',
+        );
         _products = [];
         return;
       }
 
-      if (response.notFoundIDs.isNotEmpty) {
-        print('⚠️ Products not found: ${response.notFoundIDs}');
-      }
-
       if (response.productDetails.isEmpty) {
-        print('⚠️ No products loaded');
         _products = [];
         return;
       }
 
       _products = response.productDetails;
-      print('✓ Loaded ${_products.length} products:');
-      for (var product in _products) {
-        print('  • ${product.id}: ${product.title} (${product.price})');
-      }
-    } catch (e) {
-      print('❌ Exception loading products: $e');
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(
+        e, stack,
+        reason: 'Failed to load IAP products',
+      );
       _products = [];
     }
   }
@@ -128,18 +115,15 @@ class IAPService {
     }
 
     _purchasePending = true;
-    print('Starting purchase for: ${product.id}');
 
     try {
       final PurchaseParam purchaseParam = PurchaseParam(
         productDetails: product,
       );
 
-      // CRITICAL: Use buyConsumable with autoConsume for donations
-      // This means Apple handles everything - no server validation needed
       final bool success = await _inAppPurchase.buyConsumable(
         purchaseParam: purchaseParam,
-        autoConsume: true, // AUTO-CONSUME = No server needed!
+        autoConsume: true,
       );
 
       if (!success) {
@@ -147,55 +131,45 @@ class IAPService {
         throw Exception('Failed to initiate purchase');
       }
 
-      print('✓ Purchase initiated successfully');
       return true;
-    } catch (e) {
-      print('❌ Purchase error: $e');
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(
+        e, stack,
+        reason: 'Purchase failed for: ${product.id}',
+      );
       _purchasePending = false;
       rethrow;
     }
   }
 
   void _onPurchaseUpdate(List<PurchaseDetails> purchaseDetailsList) {
-    print('📱 Purchase update: ${purchaseDetailsList.length} items');
-
     for (final PurchaseDetails purchaseDetails in purchaseDetailsList) {
-      print(
-          'Status: ${purchaseDetails.status} for ${purchaseDetails.productID}');
-
       switch (purchaseDetails.status) {
         case PurchaseStatus.pending:
           _purchasePending = true;
-          print('⏳ Purchase pending...');
           break;
 
         case PurchaseStatus.purchased:
-          print('✓ Purchase successful: ${purchaseDetails.productID}');
-          // For consumables with autoConsume=true, just mark as completed
           _purchasePending = false;
           break;
 
         case PurchaseStatus.restored:
-          print('✓ Purchase restored: ${purchaseDetails.productID}');
           _purchasePending = false;
           break;
 
         case PurchaseStatus.error:
-          print('❌ Purchase error: ${purchaseDetails.error?.message}');
-          print('Error code: ${purchaseDetails.error?.code}');
+          FirebaseCrashlytics.instance.log(
+            'Purchase error: ${purchaseDetails.error?.message}',
+          );
           _purchasePending = false;
           break;
 
         case PurchaseStatus.canceled:
-          print('🚫 Purchase canceled by user');
           _purchasePending = false;
           break;
       }
 
-      // CRITICAL: Always complete the purchase
-      // This tells Apple we've handled the transaction
       if (purchaseDetails.pendingCompletePurchase) {
-        print('Completing purchase transaction...');
         _inAppPurchase.completePurchase(purchaseDetails);
       }
     }
@@ -206,13 +180,13 @@ class IAPService {
       throw Exception('In-app purchases are not available');
     }
 
-    print('Restoring purchases...');
     try {
       await _inAppPurchase.restorePurchases();
-      print('✓ Restore completed');
-      // Note: Consumable donations cannot be restored
-    } catch (e) {
-      print('❌ Restore error: $e');
+    } catch (e, stack) {
+      FirebaseCrashlytics.instance.recordError(
+        e, stack,
+        reason: 'Restore purchases failed',
+      );
       rethrow;
     }
   }

@@ -4,9 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/product_model.dart';
 import '../services/api_service.dart';
 
-// Search Query Provider
-final searchQueryProvider = StateProvider<String>((ref) => '');
-
 // Search State
 class SearchState {
   final List<Product> results;
@@ -56,7 +53,6 @@ class SearchNotifier extends StateNotifier<SearchState> {
       return;
     }
 
-    // Reset for new search
     state = SearchState(isLoading: true, lastQuery: query);
 
     try {
@@ -67,9 +63,14 @@ class SearchNotifier extends StateNotifier<SearchState> {
         currentPage: 1,
         hasMore: results.length >= 20,
       );
+    } on NetworkException catch (e) {
+      state = state.copyWith(
+        error: e.message,
+        isLoading: false,
+      );
     } catch (e) {
       state = state.copyWith(
-        error: e.toString(),
+        error: 'Something went wrong. Please try again.',
         isLoading: false,
       );
     }
@@ -91,9 +92,14 @@ class SearchNotifier extends StateNotifier<SearchState> {
         currentPage: nextPage,
         hasMore: results.length >= 20,
       );
+    } on NetworkException catch (e) {
+      state = state.copyWith(
+        error: e.message,
+        isLoading: false,
+      );
     } catch (e) {
       state = state.copyWith(
-        error: e.toString(),
+        error: 'Failed to load more results.',
         isLoading: false,
       );
     }
@@ -109,12 +115,11 @@ final searchProvider = StateNotifierProvider<SearchNotifier, SearchState>(
   (ref) => SearchNotifier(ApiService()),
 );
 
-// Search Results Provider (convenience)
+// Convenience providers
 final searchResultsProvider = Provider<List<Product>>((ref) {
   return ref.watch(searchProvider).results;
 });
 
-// Is Searching Provider
 final isSearchingProvider = Provider<bool>((ref) {
   return ref.watch(searchProvider).isLoading;
 });

@@ -112,7 +112,7 @@ class _TrackerScreenState extends ConsumerState<TrackerScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: WaterIntakeWidget(
                         current: logState.log?.waterIntake ?? 0,
-                        goal: 2000, // 2L goal
+                        goal: nutritionGoals.dailyCalories >= 2500 ? 2500 : 2000, // Scale with calorie goal
                         onAdd: () {
                           final current = logState.log?.waterIntake ?? 0;
                           ref

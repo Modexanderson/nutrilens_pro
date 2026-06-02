@@ -1,6 +1,7 @@
-// lib/data/services/ad_servie.dart
+// lib/services/ad_service.dart
 
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'dart:io';
 
 class AdService {
@@ -9,11 +10,15 @@ class AdService {
 
   AdService._();
 
-  // TODO: Replace with your actual AdMob IDs
-  // Get them from: https://apps.admob.com/
+  // =====================================================
+  // PRODUCTION AD UNIT IDs
+  // iOS ad units from AdMob console (ca-app-pub-5507149125881523)
+  // Android: CREATE AD UNITS IN ADMOB AND REPLACE BELOW
+  // =====================================================
   static String get bannerAdUnitId {
     if (Platform.isAndroid) {
-      return 'ca-app-pub-3940256099942544/6300978111'; // Test ID
+      // TODO: Create Android app in AdMob and add banner ad unit ID
+      return 'ca-app-pub-3940256099942544/6300978111'; // TEST ID - Replace!
     } else if (Platform.isIOS) {
       return 'ca-app-pub-5507149125881523/5633453325';
     }
@@ -22,7 +27,8 @@ class AdService {
 
   static String get interstitialAdUnitId {
     if (Platform.isAndroid) {
-      return 'ca-app-pub-3940256099942544/1033173712'; // Test ID
+      // TODO: Create Android app in AdMob and add interstitial ad unit ID
+      return 'ca-app-pub-3940256099942544/1033173712'; // TEST ID - Replace!
     } else if (Platform.isIOS) {
       return 'ca-app-pub-5507149125881523/4950927048';
     }
@@ -41,11 +47,14 @@ class AdService {
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
-          print('Banner Ad loaded.');
+          // Ad loaded successfully
         },
         onAdFailedToLoad: (ad, error) {
-          print('Banner Ad failed to load: $error');
+          FirebaseCrashlytics.instance.log('Banner ad failed to load: ${error.message}');
           ad.dispose();
+        },
+        onAdClicked: (ad) {
+          FirebaseCrashlytics.instance.log('Banner ad clicked');
         },
       ),
     );
@@ -68,29 +77,26 @@ class AdService {
         onAdLoaded: (ad) {
           _interstitialAd = ad;
           _isInterstitialAdReady = true;
-          print('Interstitial Ad loaded.');
 
           _interstitialAd!.fullScreenContentCallback =
               FullScreenContentCallback(
-            onAdShowedFullScreenContent: (ad) {
-              print('Interstitial Ad showed full screen.');
-            },
             onAdDismissedFullScreenContent: (ad) {
-              print('Interstitial Ad dismissed.');
               ad.dispose();
               _isInterstitialAdReady = false;
               loadInterstitialAd(); // Preload next ad
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
-              print('Interstitial Ad failed to show: $error');
+              FirebaseCrashlytics.instance
+                  .log('Interstitial failed to show: ${error.message}');
               ad.dispose();
               _isInterstitialAdReady = false;
-              loadInterstitialAd(); // Preload next ad
+              loadInterstitialAd();
             },
           );
         },
         onAdFailedToLoad: (error) {
-          print('Interstitial Ad failed to load: $error');
+          FirebaseCrashlytics.instance
+              .log('Interstitial failed to load: ${error.message}');
           _isInterstitialAdReady = false;
         },
       ),
@@ -103,8 +109,7 @@ class AdService {
       _isInterstitialAdReady = false;
       _interstitialAd = null;
     } else {
-      print('Interstitial Ad not ready yet.');
-      loadInterstitialAd(); // Try loading again
+      loadInterstitialAd();
     }
   }
 

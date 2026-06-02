@@ -8,6 +8,7 @@ import '../models/user_profile_model.dart';
 import '../providers/user_profile_provider.dart';
 import '../providers/comparison_provider.dart';
 import '../services/storage_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/product_card.dart';
 import 'product_detail_screen.dart';
 import 'compare_screen.dart';
@@ -22,11 +23,20 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _remindersEnabled = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadReminderState();
+  }
+
+  Future<void> _loadReminderState() async {
+    final enabled = await NotificationService.instance.areMealRemindersEnabled();
+    if (mounted) {
+      setState(() => _remindersEnabled = enabled);
+    }
   }
 
   @override
@@ -148,6 +158,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Notifications Section
+        _buildSectionHeader('Notifications'),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.notifications_outlined),
+            title: const Text('Meal Reminders'),
+            subtitle: const Text('Daily reminders to log your meals'),
+            trailing: Switch(
+              value: _remindersEnabled,
+              onChanged: (enabled) async {
+                if (enabled) {
+                  await NotificationService.instance.enableMealReminders();
+                } else {
+                  await NotificationService.instance.disableMealReminders();
+                }
+                setState(() => _remindersEnabled = enabled);
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+
         // Theme Section
         _buildSectionHeader('Appearance'),
         Card(
@@ -317,7 +349,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               const ListTile(
                 leading: Icon(Icons.info_outline),
                 title: Text('Version'),
-                trailing: Text('1.0.1'),
+                trailing: Text('1.0.5'),
               ),
               const Divider(height: 1),
               ListTile(
@@ -342,7 +374,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   showLicensePage(
                     context: context,
                     applicationName: 'NutriLens Pro',
-                    applicationVersion: '1.0.1',
+                    applicationVersion: '1.0.5',
                     applicationIcon:
                         Image.asset('assets/icons/app_icon.png', width: 48),
                   );

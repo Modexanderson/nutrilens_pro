@@ -46,7 +46,6 @@
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>We need access to your photo library to scan barcodes from images</string>
 		<!-- AdMob App ID -->
-		<!-- TODO: Replace with your actual AdMob App ID -->
 		<key>GADApplicationIdentifier</key>
 		<string>ca-app-pub-5507149125881523~8162773116</string>
 		
