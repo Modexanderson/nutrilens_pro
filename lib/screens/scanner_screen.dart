@@ -299,7 +299,7 @@ class _ScannerScreenState extends State<ScannerScreen>
         MobileScanner(
           controller: _controller!,
           onDetect: _onBarcodeDetected,
-          errorBuilder: (context, error, child) {
+          errorBuilder: (context, error) {
             return _buildCameraError();
           },
         ),
