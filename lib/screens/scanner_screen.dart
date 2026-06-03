@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../services/connectivity_service.dart';
@@ -43,6 +44,19 @@ class _ScannerScreenState extends State<ScannerScreen>
     setState(() => _isInitializing = true);
 
     try {
+      // Explicitly request camera permission first
+      final status = await Permission.camera.request();
+
+      if (!status.isGranted) {
+        if (mounted) {
+          setState(() {
+            _permissionGranted = false;
+            _isInitializing = false;
+          });
+        }
+        return;
+      }
+
       _controller?.dispose();
 
       _controller = MobileScannerController(
@@ -318,6 +332,11 @@ class _ScannerScreenState extends State<ScannerScreen>
               onPressed: _initializeScanner,
               icon: const Icon(Icons.refresh),
               label: const Text('Try Again'),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => openAppSettings(),
+              child: const Text('Open Settings'),
             ),
           ],
         ),
