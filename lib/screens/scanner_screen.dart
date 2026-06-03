@@ -23,48 +23,39 @@ class _ScannerScreenState extends State<ScannerScreen>
   final ApiService _apiService = ApiService();
   bool _isProcessing = false;
   bool _permissionGranted = false;
+  bool _cameraError = false;
+  String _errorMessage = '';
   bool _isInitializing = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initializeScanner();
+    _checkPermissionAndInit();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
-      _initializeScanner();
+      _checkPermissionAndInit();
     }
   }
 
-  Future<void> _initializeScanner() async {
-    setState(() => _isInitializing = true);
+  Future<void> _checkPermissionAndInit() async {
+    setState(() {
+      _isInitializing = true;
+      _cameraError = false;
+    });
 
     try {
-      // Check current permission status first
       var status = await Permission.camera.status;
 
       if (status.isDenied) {
-        // First time or previously denied (not permanently) — request it
         status = await Permission.camera.request();
       }
 
-      if (status.isPermanentlyDenied || status.isRestricted) {
-        // User permanently denied — must go to settings
-        if (mounted) {
-          setState(() {
-            _permissionGranted = false;
-            _isInitializing = false;
-          });
-        }
-        return;
-      }
-
       if (!status.isGranted) {
-        // Permission not granted for other reasons
         if (mounted) {
           setState(() {
             _permissionGranted = false;
@@ -74,14 +65,12 @@ class _ScannerScreenState extends State<ScannerScreen>
         return;
       }
 
+      // Permission granted — create controller and let the widget start it
       _controller?.dispose();
-
       _controller = MobileScannerController(
         detectionSpeed: DetectionSpeed.normal,
         facing: CameraFacing.back,
       );
-
-      await _controller!.start();
 
       if (mounted) {
         setState(() {
@@ -97,7 +86,8 @@ class _ScannerScreenState extends State<ScannerScreen>
       );
       if (mounted) {
         setState(() {
-          _permissionGranted = false;
+          _cameraError = true;
+          _errorMessage = e.toString();
           _isInitializing = false;
         });
       }
@@ -287,20 +277,35 @@ class _ScannerScreenState extends State<ScannerScreen>
               ]
             : null,
       ),
-      body: _isInitializing
-          ? _buildLoadingState()
-          : !_permissionGranted
-              ? _buildPermissionDenied()
-              : Stack(
-                  children: [
-                    MobileScanner(
-                      controller: _controller!,
-                      onDetect: _onBarcodeDetected,
-                    ),
-                    _buildOverlay(),
-                    if (_isProcessing) _buildLoadingOverlay(),
-                  ],
-                ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isInitializing) {
+      return _buildLoadingState();
+    }
+
+    if (_cameraError) {
+      return _buildCameraError();
+    }
+
+    if (!_permissionGranted) {
+      return _buildPermissionDenied();
+    }
+
+    return Stack(
+      children: [
+        MobileScanner(
+          controller: _controller!,
+          onDetect: _onBarcodeDetected,
+          errorBuilder: (context, error, child) {
+            return _buildCameraError();
+          },
+        ),
+        _buildOverlay(),
+        if (_isProcessing) _buildLoadingOverlay(),
+      ],
     );
   }
 
@@ -346,7 +351,7 @@ class _ScannerScreenState extends State<ScannerScreen>
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: _initializeScanner,
+              onPressed: _checkPermissionAndInit,
               icon: const Icon(Icons.refresh),
               label: const Text('Try Again'),
             ),
@@ -354,6 +359,46 @@ class _ScannerScreenState extends State<ScannerScreen>
             TextButton(
               onPressed: () => openAppSettings(),
               child: const Text('Open Settings'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCameraError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 80,
+              color: Colors.orange,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Camera Error',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _errorMessage.isNotEmpty
+                  ? 'Could not start the camera:\n$_errorMessage'
+                  : 'Could not start the camera. Please try again.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _checkPermissionAndInit,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Try Again'),
             ),
           ],
         ),
