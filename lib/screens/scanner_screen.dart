@@ -246,16 +246,7 @@ class _ScannerScreenState extends State<ScannerScreen>
         actions: _permissionGranted && _controller != null
             ? [
                 IconButton(
-                  icon: ValueListenableBuilder(
-                    valueListenable: _controller!.torchState,
-                    builder: (context, state, child) {
-                      return Icon(
-                        state == TorchState.off
-                            ? Icons.flash_off
-                            : Icons.flash_on,
-                      );
-                    },
-                  ),
+                  icon: const Icon(Icons.flash_on),
                   onPressed: () => _controller!.toggleTorch(),
                 ),
                 IconButton(
