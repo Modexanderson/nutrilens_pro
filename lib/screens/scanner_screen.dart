@@ -44,10 +44,27 @@ class _ScannerScreenState extends State<ScannerScreen>
     setState(() => _isInitializing = true);
 
     try {
-      // Explicitly request camera permission first
-      final status = await Permission.camera.request();
+      // Check current permission status first
+      var status = await Permission.camera.status;
+
+      if (status.isDenied) {
+        // First time or previously denied (not permanently) — request it
+        status = await Permission.camera.request();
+      }
+
+      if (status.isPermanentlyDenied || status.isRestricted) {
+        // User permanently denied — must go to settings
+        if (mounted) {
+          setState(() {
+            _permissionGranted = false;
+            _isInitializing = false;
+          });
+        }
+        return;
+      }
 
       if (!status.isGranted) {
+        // Permission not granted for other reasons
         if (mounted) {
           setState(() {
             _permissionGranted = false;
