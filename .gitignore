@@ -53,3 +53,4 @@ serviceAccountKey.json
 # Uncomment if you don't want these tracked:
 # android/app/google-services.json
 # ios/Runner/GoogleService-Info.plist
+ios/Podfile.lock
