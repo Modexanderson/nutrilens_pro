@@ -1,7 +1,7 @@
 name: nutrilens_pro
 description: Professional food barcode scanner with nutrition information
 publish_to: 'none'
-version: 1.0.5+8
+version: 1.0.5+9
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -48,6 +48,7 @@ dependencies:
 
   # Local Notifications
   flutter_local_notifications: ^18.0.1
+  timezone: ^0.10.0
 
   # Utilities
   intl: ^0.18.1

@@ -94,7 +94,7 @@ class ApiService {
           'search_terms': query,
           'page': page,
           'page_size': 20,
-          'json': true,
+          'json': 1,
           'fields': [
             'code',
             'product_name',
@@ -153,7 +153,7 @@ class ApiService {
           'tag_0': category,
           'page': page,
           'page_size': 20,
-          'json': true,
+          'json': 1,
           'fields': [
             'code',
             'product_name',
